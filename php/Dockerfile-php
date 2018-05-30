@@ -1,0 +1,54 @@
+FROM php:fpm-alpine3.7
+
+# Update System
+RUN apk --no-cache update \
+    && apk --no-cache upgrade
+
+# install dependencies
+
+RUN apk add --no-cache \
+            coreutils \
+            freetype-dev \
+            libjpeg-turbo-dev \
+            libpng-dev \
+            libmcrypt-dev \
+            libltdl \
+            zlib-dev
+
+
+# Install php librarys/extensions
+RUN NPROC=$(getconf _NPROCESSORS_ONLN) \
+    && docker-php-ext-configure gd \
+        --with-gd \
+        --with-freetype-dir=/usr/include/ \
+        --with-jpeg-dir=/usr/include/ \
+        --with-png-dir=/usr/include/ \
+    && docker-php-ext-install -j${NPROC} gd \
+        zip \
+        opcache
+
+# PECL Install
+RUN apk add --no-cache \
+      $PHPIZE_DEPS \
+      yaml-dev \
+    && pecl install yaml-2.0.0 \
+    && docker-php-ext-enable yaml
+
+# # Install Memcached for php 7
+# RUN curl -L -o /tmp/memcached.tar.gz "https://github.com/php-memcached-dev/php-memcached/archive/php7.tar.gz" \
+#     && mkdir -p /usr/src/php/ext/memcached \
+#     && tar -C /usr/src/php/ext/memcached -zxvf /tmp/memcached.tar.gz --strip 1 \
+#     && docker-php-ext-configure memcached \
+#     && docker-php-ext-install memcached \
+#     && rm /tmp/memcached.tar.gz
+
+
+# cleanup
+RUN apk del --no-cache freetype libpng libjpeg-turbo
+
+
+#ENTRYPOINT ["docker-php-entrypoint"]
+
+#EXPOSE 9000
+
+#CMD ["php-fpm"]
